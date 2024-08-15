@@ -1,38 +1,27 @@
--- Если честно я не помню, когда мне компилятор предложил добавить эту прагму, но без неё он ругался
-{-# LANGUAGE BlockArguments #-}  
-
--- Чтобы было меньше возьни с переводом между Text, String и ByteString (на самом деле мороки всё равно достаточно)
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE OverloadedStrings #-} 
- 
--- core нашего сервера
+
 import Network.Wai
 import Network.Wai.Handler.Warp 
 
--- Для красивых статусов
 import Network.HTTP.Types (status200, status405) 
 
 import Data.Text
-
--- Для JSON
 import Data.Aeson
-
--- Для чтения Text куда нам надо (в нашем случае в Double)
 import Data.Attoparsec.Text
 
 
--- Network.Wai.responseBuilder собирает нам ответ сервера
--- Посылаем такой ответ на "плохой" запрос (неправильный)
+-- Network.Wai.responseBuilder собирает ответ сервера
+-- Посылаем такой ответ на неправильный
 badRequest :: Response
 badRequest = responseBuilder status405 [] "Bad request"
 
 
--- Формируем хороший ответ из того, что можно перевести в JSON
 jsonResponse :: ToJSON a => a -> Response
 jsonResponse
   = responseBuilder status200 [] . fromEncoding . toEncoding
 
 
--- Сам сервер
 -- type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 serverApp :: Application
 serverApp req send = do
@@ -48,7 +37,6 @@ serverApp req send = do
                     -- если путь не вида /sqrt/x или /binop/x/y - посылаем ответ на плохой запрос
                     _ -> pure badRequest
             _ -> pure badRequest
-    -- высылаем полученный ответ
     send response
 
 -- После парсинга получаем либо сообщение об ошибке парсинга, либо double
@@ -65,7 +53,6 @@ afterBinParse op (Right x) (Right y) = getBinResponse op x y
 
 -- Ответ на запрос на вычисление корня
 -- здесь и далее создаём ответ из Data.Object
--- Можно было чуть-чуть сократить, но так нагляднее и читабельнее, как мне кажется
 getSqrtResponse :: Double -> IO Response
 getSqrtResponse x = do
     case x >= 0 of
@@ -83,7 +70,6 @@ getSqrtResponse x = do
             ]
 
 -- Рассматриваем все бинарные операции
--- Опять же, втупую гораздо читабельнее, как мне кажется
 getBinResponse :: Text -> Double -> Double -> IO Response
 getBinResponse op x y = do
     case op of
